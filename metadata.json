@@ -1,0 +1,6 @@
+{
+  "name": "Daftar Penggajian Vendor",
+  "description": "Aplikasi pembuatan dan manajemen daftar penggajian vendor dengan integrasi pengiriman laporan langsung ke WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

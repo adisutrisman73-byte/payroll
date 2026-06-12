@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:ital,wght@1,700;1,800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Print layout optimizations */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  .print\:block {
+    display: block !important;
+  }
+}
+
+/* Brutalist solid styles */
+.brutalist-card {
+  border: 2px solid #141414;
+  background-color: #ffffff;
+  box-shadow: 4px 4px 0px #141414;
+}
+
+.brutalist-button {
+  background-color: #ffffff;
+  border: 2px solid #141414;
+  color: #141414;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 4px 4px 0px #141414;
+  transition: all 0.1s ease;
+}
+
+.brutalist-button:hover {
+  background-color: #f8f9fa;
+}
+
+.brutalist-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #141414;
+}
+
+.brutalist-button-primary {
+  background-color: #141414;
+  color: #ffffff;
+  border: 2px solid #141414;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 4px 4px 0px #4f46e5;
+  transition: all 0.1s ease;
+}
+
+.brutalist-button-primary:hover {
+  background-color: #242424;
+}
+
+.brutalist-button-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #4f46e5;
+}
+
+.brutalist-button-wa {
+  background-color: #25D366;
+  color: #ffffff;
+  border: 2px solid #141414;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 4px 4px 0px #141414;
+  transition: all 0.1s ease;
+}
+
+.brutalist-button-wa:hover {
+  background-color: #20ba56;
+}
+
+.brutalist-button-wa:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #141414;
+}
+
+.brutalist-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #141414;
+  background-color: #ffffff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  color: #141414;
+  outline: none;
+  border-radius: 0px;
+  transition: all 0.15s ease;
+}
+
+.brutalist-input:focus {
+  background-color: #fff;
+  box-shadow: 3px 3px 0px #4f46e5;
+}
+
+/* Custom scrollbar matching brutalist density theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f2f2f0;
+  border-left: 2px solid #141414;
+}
+::-webkit-scrollbar-thumb {
+  background: #141414;
+}

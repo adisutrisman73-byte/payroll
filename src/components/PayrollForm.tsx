@@ -17,28 +17,38 @@ import {
   Sparkles,
   RefreshCw,
   Copy,
-  CheckCheck
+  CheckCheck,
+  History,
+  Search,
+  Edit3,
+  CornerUpLeft,
+  Download,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PayrollFormProps {
   vendors: VendorPreset[];
+  history: PayrollItem[];
   draftItems: PayrollItem[];
   waConfig: WAConfig;
   onAddDraft: (item: Omit<PayrollItem, 'id' | 'dateCreated'>) => void;
   onRemoveDraft: (id: string) => void;
   onClearDraft: () => void;
   onSubmitDrafts: (items: PayrollItem[]) => void;
+  onSetDrafts?: (items: PayrollItem[]) => void;
 }
 
 export default function PayrollForm({
   vendors,
+  history = [],
   draftItems,
   waConfig,
   onAddDraft,
   onRemoveDraft,
   onClearDraft,
   onSubmitDrafts,
+  onSetDrafts,
 }: PayrollFormProps) {
   // Input fields state
   const [selectedPresetVendorId, setSelectedPresetVendorId] = useState('');
@@ -55,6 +65,69 @@ export default function PayrollForm({
   const [whatsappSent, setWhatsappSent] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
 
+  // States for importing history records
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const [importSuccessMessage, setImportSuccessMessage] = useState('');
+
+  // States for bulk export/import panel
+  const [showBulkPanel, setShowBulkPanel] = useState(false);
+  const [bulkInputText, setBulkInputText] = useState('');
+  const [bulkErrorMessage, setBulkErrorMessage] = useState('');
+
+  // Autofill form inputs from selected active draft item
+  const handleAutofillFromDraft = (item: PayrollItem) => {
+    setProjectName(item.projectName);
+    setVendorName(item.vendorName);
+    
+    if (TERMIN_OPTIONS.includes(item.term)) {
+      setTerm(item.term);
+      setCustomTerm('');
+    } else {
+      setTerm('Lain-lain / Custom');
+      setCustomTerm(item.term);
+    }
+    
+    setAmount(item.amount.toString());
+    
+    const standardBanks = INDONESIAN_BANKS.map(b => b.code.toUpperCase());
+    const matchBank = item.bankName.toUpperCase();
+    if (standardBanks.includes(matchBank)) {
+      setBankName(matchBank);
+      setCustomBankName('');
+    } else {
+      setBankName('OTHER');
+      setCustomBankName(item.bankName);
+    }
+    
+    setBankAccount(item.bankAccount || '');
+    setBankHolderName(item.bankHolderName || '');
+    setNotes(item.notes || '');
+    
+    setImportSuccessMessage(`BERHASIL MEMUAT DATA DRAF "${item.vendorName.toUpperCase()}" KE FORM INPUT!`);
+    setTimeout(() => setImportSuccessMessage(''), 4000);
+    
+    // Smooth scroll to form top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Duplicate an active draft item
+  const handleDuplicateDraft = (item: PayrollItem) => {
+    onAddDraft({
+      projectName: item.projectName,
+      vendorName: item.vendorName,
+      term: item.term,
+      amount: item.amount,
+      bankName: item.bankName,
+      bankAccount: item.bankAccount,
+      bankHolderName: item.bankHolderName,
+      status: 'Pending',
+      notes: item.notes,
+    });
+    setImportSuccessMessage(`BERHASIL MENDUPLIKASI DRAF "${item.vendorName.toUpperCase()}"!`);
+    setTimeout(() => setImportSuccessMessage(''), 4000);
+  };
+
   // Suggested project names from existing draft or previous saves (can be loaded)
   const [projectSuggestions, setProjectSuggestions] = useState<string[]>([]);
 
@@ -63,14 +136,14 @@ export default function PayrollForm({
     try {
       const persisted = localStorage.getItem('payroll_history');
       if (persisted) {
-        const history: PayrollItem[] = JSON.parse(persisted);
-        const projects = Array.from(new Set(history.map(h => h.projectName))).slice(0, 5);
+        const historyData: PayrollItem[] = JSON.parse(persisted);
+        const projects = Array.from(new Set(historyData.map(h => h.projectName))).slice(0, 5);
         setProjectSuggestions(projects);
       }
     } catch (e) {
       console.error(e);
     }
-  }, [draftItems]);
+  }, [draftItems, history]);
 
   // When a preset vendor is selected, auto-populate the inputs!
   const handleVendorSelect = (vendorId: string) => {
@@ -89,6 +162,56 @@ export default function PayrollForm({
       setBankAccount(vendor.bankAccount);
       setBankHolderName(vendor.accountHolder);
     }
+  };
+
+  // Autofill form inputs from selected history item
+  const handleAutofillFromHistory = (item: PayrollItem) => {
+    setProjectName(item.projectName);
+    setVendorName(item.vendorName);
+    
+    if (TERMIN_OPTIONS.includes(item.term)) {
+      setTerm(item.term);
+      setCustomTerm('');
+    } else {
+      setTerm('Lain-lain / Custom');
+      setCustomTerm(item.term);
+    }
+    
+    setAmount(item.amount.toString());
+    
+    const standardBanks = INDONESIAN_BANKS.map(b => b.code.toUpperCase());
+    const matchBank = item.bankName.toUpperCase();
+    if (standardBanks.includes(matchBank)) {
+      setBankName(matchBank);
+      setCustomBankName('');
+    } else {
+      setBankName('OTHER');
+      setCustomBankName(item.bankName);
+    }
+    
+    setBankAccount(item.bankAccount || '');
+    setBankHolderName(item.bankHolderName || '');
+    setNotes(item.notes || '');
+    
+    setImportSuccessMessage(`BERHASIL MEMUAT DATA "${item.vendorName.toUpperCase()}" KE FORM INPUT!`);
+    setTimeout(() => setImportSuccessMessage(''), 4000);
+  };
+
+  // Directly insert history item as a new active draft
+  const handleDirectAddFromHistory = (item: PayrollItem) => {
+    onAddDraft({
+      projectName: item.projectName,
+      vendorName: item.vendorName,
+      term: item.term,
+      amount: item.amount,
+      bankName: item.bankName,
+      bankAccount: item.bankAccount,
+      bankHolderName: item.bankHolderName,
+      status: 'Pending',
+      notes: item.notes,
+    });
+    setImportSuccessMessage(`BERHASIL MENYALIN "${item.vendorName.toUpperCase()}" LANGSUNG KE DRAF AKTIF!`);
+    setTimeout(() => setImportSuccessMessage(''), 4000);
   };
 
   const handleAddDraftItem = (e: React.FormEvent) => {
@@ -141,6 +264,18 @@ export default function PayrollForm({
     setCustomBankName('');
   };
 
+  // Derived state to filter past history based on quick search
+  const filteredHistoryItems = history.filter((item) => {
+    if (!historySearchQuery) return true;
+    const query = historySearchQuery.toLowerCase();
+    return (
+      item.projectName.toLowerCase().includes(query) ||
+      item.vendorName.toLowerCase().includes(query) ||
+      item.term.toLowerCase().includes(query) ||
+      (item.bankName && item.bankName.toLowerCase().includes(query))
+    );
+  }).slice(0, 10);
+
   const currentBatchTotal = draftItems.reduce((acc, item) => acc + item.amount, 0);
   const waPreviewText = parseWATemplate(waConfig.messageTemplate, draftItems);
 
@@ -186,13 +321,195 @@ export default function PayrollForm({
             </div>
           </div>
 
+          {/* Feedback banner */}
+          <AnimatePresence>
+            {importSuccessMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-4 bg-indigo-50 text-indigo-950 border-2 border-indigo-500 font-mono text-[10px] font-bold p-3 flex items-center gap-2 shadow-[2px_2px_0px_#4f46e5]"
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse shrink-0" />
+                <span>{importSuccessMessage}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <form onSubmit={handleAddDraftItem} className="space-y-4">
+            {/* Importer dari Histori Terakhir */}
+            <div className="bg-[#eef2ff] border-2 border-[#141414] p-4 relative space-y-3 shadow-[2px_2px_0px_#141414]">
+              <label className="block text-[11px] font-bold font-mono tracking-wider text-indigo-950 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-extrabold text-[#4f46e5]">
+                  <History className="w-4 h-4 text-[#4f46e5]" />
+                  📥 IMPORT DARI HISTORI SEBELUMNYA
+                </span>
+                <span className="text-[9px] bg-indigo-700 text-white px-1.5 py-0.5 font-mono">FAST COPY</span>
+              </label>
+
+              <div className="relative">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Search className="h-3.5 w-3.5 text-indigo-700" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Cari berdasarkan Project, Vendor, atau Termin..."
+                  value={historySearchQuery}
+                  onChange={(e) => {
+                    setHistorySearchQuery(e.target.value);
+                    setShowHistoryDropdown(true);
+                  }}
+                  onFocus={() => setShowHistoryDropdown(true)}
+                  className="w-full text-xs font-mono bg-white border-2 border-[#141414] pl-9 pr-8 py-2 focus:outline-hidden focus:shadow-[2px_2px_0px_#4f46e5] text-gray-800"
+                />
+                {historySearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistorySearchQuery('');
+                      setShowHistoryDropdown(false);
+                    }}
+                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-black cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Suggestions / Dropdown results */}
+              {showHistoryDropdown && (
+                <div className="relative">
+                  <div className="absolute z-30 left-0 right-0 max-h-[220px] overflow-y-auto bg-white border-2 border-[#141414] shadow-[4px_4px_0px_#141414] p-1 space-y-1">
+                    <div className="flex justify-between items-center px-2 py-1 border-b border-gray-150 bg-[#f8f9fa]">
+                      <span className="text-[9px] font-mono text-gray-500 uppercase tracking-wider col-title">
+                        Hasil Pencarian ({filteredHistoryItems.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowHistoryDropdown(false)}
+                        className="text-[9px] font-mono font-bold text-red-500 hover:underline cursor-pointer"
+                      >
+                        TUTUP
+                      </button>
+                    </div>
+
+                    {filteredHistoryItems.length === 0 ? (
+                      <div className="text-center py-4 text-xs text-gray-500 font-mono">
+                        Tidak ada histori yang cocok.
+                      </div>
+                    ) : (
+                      filteredHistoryItems.map((item) => (
+                        <div
+                          key={`hist-opt-${item.id}`}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between p-2 hover:bg-indigo-50 border border-transparent hover:border-[#141414] transition-all gap-2 text-left"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[9px] font-extrabold uppercase bg-red-100 text-red-800 px-1 border border-red-200">
+                                {item.projectName}
+                              </span>
+                              <span className="text-[10px] font-bold text-gray-800 truncate">
+                                {item.vendorName}
+                              </span>
+                            </div>
+                            <div className="text-[9px] font-mono text-gray-500 mt-1 uppercase flex items-center gap-1.5 flex-wrap">
+                              <span>Termin: {item.term}</span>
+                              <span>•</span>
+                              <span>{item.bankName} - {item.bankAccount || '(No Rek)'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0 self-end sm:self-center">
+                            <span className="text-[10px] font-black font-mono text-gray-900 mr-2">
+                              {formatRupiah(item.amount)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleAutofillFromHistory(item);
+                                setShowHistoryDropdown(false);
+                              }}
+                              className="bg-indigo-700 hover:bg-indigo-800 text-white text-[9px] font-bold font-mono px-2 py-1 border border-indigo-700 transition-all cursor-pointer uppercase"
+                              title="Salin isi data ini ke form input"
+                            >
+                              Isi Form
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleDirectAddFromHistory(item);
+                                setShowHistoryDropdown(false);
+                              }}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold font-mono px-2 py-1 border border-emerald-600 transition-all cursor-pointer uppercase"
+                              title="Masukkan langsung ke draf aktif"
+                            >
+                              + Draf
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Informative quick items for rapid access */}
+              {!historySearchQuery && history.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[10px] font-mono text-indigo-950 font-bold uppercase tracking-wider flex items-center gap-1">
+                    <span>⚡ CARI ATAU PILIH HISTORI CEPAT:</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {history.slice(0, 4).map((item) => (
+                      <div
+                        key={`hist-quick-${item.id}`}
+                        className="bg-white border-2 border-[#141414] p-2 hover:bg-indigo-50 hover:shadow-[1px_1px_0px_#141414] transition-all flex flex-col justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1 justify-between flex-wrap">
+                            <span className="text-[8px] font-extrabold uppercase bg-red-100 text-red-800 px-1 border border-red-200 truncate max-w-[80px]">
+                              {item.projectName}
+                            </span>
+                            <span className="text-[9px] font-black font-mono text-gray-900">
+                              {formatRupiah(item.amount)}
+                            </span>
+                          </div>
+                          <div className="text-[10px] font-extrabold text-gray-800 mt-1 truncate">
+                            {item.vendorName}
+                          </div>
+                          <div className="text-[9px] font-mono text-gray-500 truncate mt-0.5">
+                            {item.term}
+                          </div>
+                        </div>
+                        <div className="mt-2 pt-1.5 border-t border-gray-150 flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleAutofillFromHistory(item)}
+                            className="text-[9px] text-indigo-700 hover:underline font-mono font-bold cursor-pointer uppercase animate-none"
+                          >
+                            Isi Form
+                          </button>
+                          <span className="text-gray-300 text-[9px] font-mono">|</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDirectAddFromHistory(item)}
+                            className="text-[9px] text-emerald-600 hover:underline font-mono font-bold cursor-pointer uppercase"
+                          >
+                            + Draf Aktif
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Quick Preset database vendor */}
             {vendors.length > 0 && (
-              <div className="bg-[#f2f2f0] border-2 border-[#141414] p-4 relative">
+              <div className="bg-[#f2f2f0] border-2 border-[#141414] p-4 relative shadow-[2px_2px_0px_#141414]">
                 <label className="block text-[11px] font-bold font-mono tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                   <span>🚀 PILIH DARI DATABASE VENDOR</span>
-                  <span className="text-[9px] bg-[#141414] text-white px-1.5 py-0.5 font-mono">HOTKEY</span>
+                  <span className="text-[9px] bg-[#141414] text-white px-1.5 py-0.5 font-mono">DATABASE</span>
                 </label>
                 <select
                   value={selectedPresetVendorId}
@@ -454,14 +771,30 @@ export default function PayrollForm({
                     exit={{ opacity: 0, x: -20 }}
                     className="p-3 bg-gray-50 border-2 border-[#141414] relative transition-all"
                   >
-                    <button
-                      onClick={() => onRemoveDraft(item.id)}
-                      className="absolute right-3 top-3 text-red-600 hover:text-white border border-red-600 hover:bg-red-600 transition-all p-1 cursor-pointer"
-                      title="Hapus draf ini"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="text-[10px] font-bold font-mono text-[#4f46e5] truncate max-w-[80%] uppercase">{item.projectName}</div>
+                    <div className="absolute right-3 top-3 flex items-center gap-1.5 bg-gray-50 pl-2">
+                      <button
+                        onClick={() => handleAutofillFromDraft(item)}
+                        className="text-indigo-600 hover:text-white border border-indigo-600 hover:bg-indigo-600 transition-all p-1 cursor-pointer bg-white"
+                        title="Edit / Salin isi draf ini ke Form input"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDuplicateDraft(item)}
+                        className="text-emerald-600 hover:text-white border border-emerald-600 hover:bg-emerald-600 transition-all p-1 cursor-pointer bg-white"
+                        title="Duplikat draf ini langsung"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onRemoveDraft(item.id)}
+                        className="text-red-600 hover:text-white border border-red-600 hover:bg-red-600 transition-all p-1 cursor-pointer bg-white"
+                        title="Hapus draf ini"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="text-[10px] font-bold font-mono text-[#4f46e5] truncate max-w-[65%] uppercase">{item.projectName}</div>
                     <div className="font-extrabold text-[#141414] mt-0.5 text-sm">{item.vendorName}</div>
                     <div className="text-xxs text-gray-600 font-mono mt-1">
                       {item.term} • {item.bankName} - {item.bankAccount} ({item.bankHolderName})
@@ -486,6 +819,118 @@ export default function PayrollForm({
                 ))
               )}
             </AnimatePresence>
+          </div>
+
+          {/* Panel Ekspor/Impor Batch */}
+          <div className="mt-4 pt-3 border-t-2 border-[#141414]">
+            <button
+              type="button"
+              onClick={() => {
+                setShowBulkPanel(!showBulkPanel);
+                // Pre-populate with current draft JSON when opened
+                if (!showBulkPanel) {
+                  setBulkInputText(JSON.stringify(draftItems.map(({ id, dateCreated, ...rest }) => rest), null, 2));
+                }
+              }}
+              className="text-xxs font-mono font-bold text-indigo-700 hover:underline uppercase flex items-center gap-1 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              ⚙️ EKSPOR / IMPOR BATCH JSON DRAF ({draftItems.length} ITEM)
+            </button>
+
+            {showBulkPanel && (
+              <div className="mt-3 bg-[#eef2ff] border-2 border-[#141414] p-4 space-y-3 font-mono text-xs shadow-[2px_2px_0px_#141414]">
+                <p className="text-[10px] text-indigo-950 leading-normal font-bold">
+                  Kopi format JSON draf siap kirim di bawah ini untuk disimpan / dibagikan. Atau, Anda dapat menempel (paste) kode draf lama Anda di kotak ini untuk diimpor kembali ke Draf Baru.
+                </p>
+                <textarea
+                  value={bulkInputText}
+                  onChange={(e) => setBulkInputText(e.target.value)}
+                  placeholder="[{ 'projectName': '...', 'vendorName': '...', 'amount': 100000 }, ...]"
+                  rows={4}
+                  className="w-full text-[10px] font-mono bg-white p-2 border-2 border-[#141414] focus:outline-hidden focus:shadow-[2px_2px_0px_#4f46e5]"
+                />
+                
+                {bulkErrorMessage && (
+                  <div className="text-red-500 text-xxs font-bold uppercase">⚠️ {bulkErrorMessage}</div>
+                )}
+
+                <div className="flex gap-2 justify-between">
+                  <div className="flex gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          if (!bulkInputText.trim()) {
+                            setBulkErrorMessage('Kotak input kosong.');
+                            return;
+                          }
+                          const items = JSON.parse(bulkInputText);
+                          if (!Array.isArray(items)) {
+                            throw new Error('Data harus berupa array objek data draf.');
+                          }
+                          
+                          // Convert/sanitize to draft items
+                          const sanitized: PayrollItem[] = items.map((item: any, index: number) => ({
+                            id: `p_${Date.now()}_index_${index}_${Math.floor(Math.random() * 1000)}`,
+                            projectName: String(item.projectName || 'Project Tanpa Nama'),
+                            vendorName: String(item.vendorName || 'Vendor Tanpa Nama'),
+                            term: String(item.term || 'Termin 1'),
+                            amount: typeof item.amount === 'number' ? item.amount : Number(String(item.amount || '0').replace(/\D/g, '')) || 0,
+                            bankName: String(item.bankName || 'BCA'),
+                            bankAccount: String(item.bankAccount || ''),
+                            bankHolderName: String(item.bankHolderName || ''),
+                            notes: String(item.notes || ''),
+                            status: 'Pending',
+                            dateCreated: new Date().toISOString(),
+                          }));
+
+                          if (onSetDrafts) {
+                            onSetDrafts([...draftItems, ...sanitized]);
+                            setImportSuccessMessage(`BERHASIL MENGIMPOR ${sanitized.length} DRAF SIAP KIRIM SECARA BATCH!`);
+                            setTimeout(() => setImportSuccessMessage(''), 4000);
+                            setBulkErrorMessage('');
+                            setShowBulkPanel(false);
+                          } else {
+                            // Fallback
+                            sanitized.forEach(it => onAddDraft(it));
+                            setImportSuccessMessage(`BERHASIL MENAMBAHKAN ${sanitized.length} DRAF!`);
+                            setTimeout(() => setImportSuccessMessage(''), 4000);
+                            setBulkErrorMessage('');
+                            setShowBulkPanel(false);
+                          }
+                        } catch (err: any) {
+                          setBulkErrorMessage(`Format salah: ${err.message}`);
+                        }
+                      }}
+                      className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-[9px] px-2.5 py-1.5 cursor-pointer uppercase border border-[#141414] transition-all"
+                    >
+                      Masukkan ke Draf Aktif
+                    </button>
+                    {draftItems.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(bulkInputText);
+                          setImportSuccessMessage('JSON DRAF BERHASIL DISALIN KE CLIPBOARD!');
+                          setTimeout(() => setImportSuccessMessage(''), 4000);
+                        }}
+                        className="bg-white hover:bg-gray-100 text-[#141414] font-bold text-[9px] px-2.5 py-1.5 cursor-pointer uppercase border border-[#141414] transition-all"
+                      >
+                        Salin JSON
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkPanel(false)}
+                    className="text-gray-500 hover:text-black font-semibold uppercase text-[9px] font-mono cursor-pointer self-center"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {draftItems.length > 0 && (

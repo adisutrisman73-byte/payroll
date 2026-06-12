@@ -355,12 +355,14 @@ export default function App() {
             >
               <PayrollForm
                 vendors={vendors}
+                history={history}
                 draftItems={draftItems}
                 waConfig={waConfig}
                 onAddDraft={handleAddDraft}
                 onRemoveDraft={handleRemoveDraft}
                 onClearDraft={handleClearDraft}
                 onSubmitDrafts={handleSubmitDrafts}
+                onSetDrafts={updateDrafts}
               />
             </motion.div>
           )}

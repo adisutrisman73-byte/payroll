@@ -75,6 +75,9 @@ export default function PayrollForm({
   const [bulkInputText, setBulkInputText] = useState('');
   const [bulkErrorMessage, setBulkErrorMessage] = useState('');
 
+  // State for direct inline modal editing of draft item
+  const [editingDraft, setEditingDraft] = useState<PayrollItem | null>(null);
+
   // Autofill form inputs from selected active draft item
   const handleAutofillFromDraft = (item: PayrollItem) => {
     setProjectName(item.projectName);
@@ -773,11 +776,18 @@ export default function PayrollForm({
                   >
                     <div className="absolute right-3 top-3 flex items-center gap-1.5 bg-gray-50 pl-2">
                       <button
-                        onClick={() => handleAutofillFromDraft(item)}
+                        onClick={() => setEditingDraft(item)}
                         className="text-indigo-600 hover:text-white border border-indigo-600 hover:bg-indigo-600 transition-all p-1 cursor-pointer bg-white"
-                        title="Edit / Salin isi draf ini ke Form input"
+                        title="Edit rincian data vendor ini secara langsung"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleAutofillFromDraft(item)}
+                        className="text-amber-600 hover:text-white border border-amber-600 hover:bg-amber-600 transition-all p-1 cursor-pointer bg-white"
+                        title="Salin rincian data ke form input sebelah kiri"
+                      >
+                        <CornerUpLeft className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDuplicateDraft(item)}
@@ -1007,6 +1017,184 @@ export default function PayrollForm({
           </motion.div>
         )}
       </div>
+
+      {/* Modal Edit Draft */}
+      <AnimatePresence>
+        {editingDraft && (
+          <div className="fixed inset-0 bg-[#141414]/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white p-6 md:p-8 max-w-lg w-full border-2 border-[#141414] shadow-[8px_8px_0px_#141414] relative max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setEditingDraft(null)}
+                className="absolute right-5 top-5 p-1 px-2 border-2 border-[#141414] hover:bg-red-50 text-gray-700 font-bold transition-colors cursor-pointer"
+              >
+                X
+              </button>
+
+              <div className="mb-4 pb-2 border-b border-gray-200">
+                <h3 className="font-extrabold font-serif text-[#141414] text-lg flex items-center gap-1.5 uppercase">
+                  ✏️ Edit Rincian DRAF Vendor
+                </h3>
+                <p className="text-[10px] text-gray-500 font-mono">UBAH RINCIAN DI BAWAH DAN SIMPAN PERUBAHAN SECARA LANGSUNG KEMBALI KE DRAF</p>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!onSetDrafts) return;
+                if (!editingDraft.projectName.trim()) {
+                  alert('Mohon masukkan nama project!');
+                  return;
+                }
+                if (!editingDraft.vendorName.trim()) {
+                  alert('Mohon masukkan nama vendor!');
+                  return;
+                }
+                if (editingDraft.amount <= 0) {
+                  alert('Mohon masukkan nominal yang valid!');
+                  return;
+                }
+                if (!editingDraft.bankAccount.trim()) {
+                  alert('Mohon masukkan nomor rekening!');
+                  return;
+                }
+                if (!editingDraft.bankHolderName.trim()) {
+                  alert('Mohon masukkan nama pemilik rekening!');
+                  return;
+                }
+
+                const updated = draftItems.map((it) => 
+                  it.id === editingDraft.id ? editingDraft : it
+                );
+                onSetDrafts(updated);
+                setImportSuccessMessage(`BERHASIL MEMPERBARUI RINCIAN "${editingDraft.vendorName.toUpperCase()}"!`);
+                setTimeout(() => setImportSuccessMessage(''), 4000);
+                setEditingDraft(null);
+              }} className="space-y-4 font-mono text-xs">
+                {/* Nama Proyek */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 mb-1">NAMA PROYEK / PEKERJAAN</label>
+                  <input
+                    type="text"
+                    value={editingDraft.projectName}
+                    onChange={(e) => setEditingDraft({ ...editingDraft, projectName: e.target.value })}
+                    className="w-full bg-white border-2 border-[#141414] px-3 py-2 text-xs font-mono focus:outline-hidden text-gray-800"
+                    required
+                  />
+                </div>
+
+                {/* Nama Vendor */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 mb-1">NAMA VENDOR / PENERIMA</label>
+                  <input
+                    type="text"
+                    value={editingDraft.vendorName}
+                    onChange={(e) => setEditingDraft({ ...editingDraft, vendorName: e.target.value })}
+                    className="w-full bg-white border-2 border-[#141414] px-3 py-2 text-xs font-mono focus:outline-hidden text-gray-800"
+                    required
+                  />
+                </div>
+
+                {/* Termin Pembayaran */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 mb-1">TERMIN / TAHAPAN PEMBAYARAN</label>
+                  <input
+                    type="text"
+                    value={editingDraft.term}
+                    onChange={(e) => setEditingDraft({ ...editingDraft, term: e.target.value })}
+                    className="w-full bg-white border-2 border-[#141414] px-3 py-2 text-xs font-mono focus:outline-hidden text-gray-800"
+                    placeholder="Contoh: Termin 1 (DP 30%), Pelunasan 100%, dll."
+                    required
+                  />
+                </div>
+
+                {/* Jumlah Nominal */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 mb-1">JUMLAH NOMINAL (RP)</label>
+                  <input
+                    type="number"
+                    value={editingDraft.amount || ''}
+                    onChange={(e) => setEditingDraft({ ...editingDraft, amount: Number(e.target.value) || 0 })}
+                    className="w-full bg-white border-2 border-[#141414] px-3 py-2 text-xs font-mono focus:outline-hidden text-gray-800 font-extrabold"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Bank */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-700 mb-1 font-mono">BANK</label>
+                    <input
+                      type="text"
+                      value={editingDraft.bankName}
+                      onChange={(e) => setEditingDraft({ ...editingDraft, bankName: e.target.value })}
+                      className="w-full bg-white border-2 border-[#141414] px-3 py-2 text-xs font-mono focus:outline-hidden text-gray-800"
+                      required
+                    />
+                  </div>
+
+                  {/* No Rekening */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-700 mb-1 font-mono">NO REKENING</label>
+                    <input
+                      type="text"
+                      value={editingDraft.bankAccount}
+                      onChange={(e) => setEditingDraft({ ...editingDraft, bankAccount: e.target.value })}
+                      className="w-full bg-white border-2 border-[#141414] px-3 py-2 text-xs font-mono focus:outline-hidden text-gray-800"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Nama Pemilik Rekening */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 mb-1">ATAS NAMA PEMILIK REKENING</label>
+                  <input
+                    type="text"
+                    value={editingDraft.bankHolderName}
+                    onChange={(e) => setEditingDraft({ ...editingDraft, bankHolderName: e.target.value })}
+                    className="w-full bg-white border-2 border-[#141414] px-3 py-2 text-xs font-mono focus:outline-hidden text-gray-800"
+                    required
+                  />
+                </div>
+
+                {/* Catatan */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-700 mb-1 font-sans">CATATAN (OPTIONAL)</label>
+                  <input
+                    type="text"
+                    value={editingDraft.notes || ''}
+                    onChange={(e) => setEditingDraft({ ...editingDraft, notes: e.target.value })}
+                    className="w-full bg-white border-2 border-[#141414] px-3 py-2 text-xs font-mono focus:outline-hidden text-gray-800"
+                    placeholder="Keterangan tambahan..."
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="pt-2 flex gap-3 font-mono font-bold">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-indigo-700 hover:bg-indigo-800 text-white p-3 border-2 border-[#141414] shadow-[3px_3px_0px_#141414] active:translate-x-1 active:translate-y-1 active:shadow-none hover:shadow-indigo-900 transition-all text-center uppercase cursor-pointer"
+                  >
+                    Simpan Perubahan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingDraft(null)}
+                    className="px-4 bg-white border-2 border-[#141414] hover:bg-red-50 text-gray-700 transition-colors uppercase cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
